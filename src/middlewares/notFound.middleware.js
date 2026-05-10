@@ -1,8 +1,65 @@
-/**
- * TODO: Handle 404 errors
- *
- * Return 404 with { error: { message: 'Route not found' } }
- */
+import multer from 'multer';
+
+export function errorHandler(err, req, res, next) {
+	console.error(err);
+
+	if (err instanceof multer.MulterError) {
+		switch (err.code) {
+			case 'LIMIT_FILE_SIZE':
+				return res.status(400).json({
+					error: {
+						message: 'File size exceeds 5MB limit',
+					},
+				});
+
+			default:
+				return res.status(400).json({
+					error: {
+						message: err.message,
+					},
+				});
+		}
+	}
+
+	if (err.message?.includes('Invalid file type')) {
+		return res.status(400).json({
+			error: {
+				message: err.message,
+			},
+		});
+	}
+
+	if (err.name === 'ValidationError') {
+		const messages = Object.values(err.errors)
+			.map((e) => e.message)
+			.join(', ');
+
+		return res.status(400).json({
+			error: {
+				message: messages,
+			},
+		});
+	}
+
+	if (err.code === 11000) {
+		return res.status(409).json({
+			error: {
+				message: 'Resource already exists',
+			},
+		});
+	}
+
+	return res.status(err.status || 500).json({
+		error: {
+			message: err.message || 'Internal server error',
+		},
+	});
+}
+
 export function notFound(req, res) {
-  // Your code here
+	return res.status(404).json({
+		error: {
+			message: 'Route not found',
+		},
+	});
 }
